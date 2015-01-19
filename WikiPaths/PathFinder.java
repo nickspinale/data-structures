@@ -13,11 +13,8 @@ import java.util.function.*;
 
 public class PathFinder extends MysteryUnweightedGraphImplementation implements Supplier<String> {
 
-    private Map<String,Integer> articleToId;
-    private Map<Integer,String> idToArticle;
-    private String[] articles;
-
-    private static Random gen = new Random();
+    private final Map<String,Integer> articleToId;
+    private final Map<Integer,String> idToArticle;
 
     /**
      * Constructs a PathFinder that represents the graph with nodes (vertices) specified as in
@@ -27,113 +24,120 @@ public class PathFinder extends MysteryUnweightedGraphImplementation implements 
      */
     public PathFinder(String nodeFile, String edgeFile) {
 
+        // Maps to match articles with their id's in the graph, and visa versa
         articleToId = new HashMap<String,Integer>();
         idToArticle = new HashMap<Integer,String>();
 
         try {
-
-            (new BufferedReader(new FileReader (new File(nodeFile)))).lines()
+            (new BufferedReader(new FileReader (new File(nodeFile))))
+                .lines()
+                // Ignore empty lines and comments
                 .filter(x -> !x.equals("") && x.charAt(0) != '#')
+                // Populate articles initialized above
                 .forEach(x -> {
                     Integer id = addVertex();
                     articleToId.put(x, id);
                     idToArticle.put(id, x);
                 });
-
-            (new BufferedReader(new FileReader (new File(edgeFile)))).lines()
+        } catch (Exception e) {
+            // Buffered reader initialization failure indicates issues with file
+            System.err.println("Problem with file: " + nodeFile + ".../n..." + e);
+        }
+        try {
+            (new BufferedReader(new FileReader (new File(edgeFile))))
+                .lines()
+                // Ignore empty lines and comments
                 .filter(x -> !x.equals("") && x.charAt(0) != '#')
+                // Parse and add links to graph
                 .forEach(x -> {
                     String[] articles = x.split("\t");
                     addEdge(articleToId.get(articles[0]), articleToId.get(articles[1]));
                 });
-
         } catch (Exception e) {
-            System.err.println("There is a problem with the input files:\n" + e);
+            // Buffered reader initialization failure indicates issues with file
+            System.err.println("Problem with file: " + edgeFile + ".../n..." + e);
         }
-
-        articles = articleToId.keySet().toArray(new String[0]);
     }
 
     private Optional<Stream<String>> travel(String starticle, String endicle) {
 
-        Integer start = articleToId.get(starticle);
-        Integer end = articleToId.get(endicle);
+        final Integer start = articleToId.get(starticle);
+        final Integer end = articleToId.get(endicle);
 
-        Map<Integer,Integer> visited = new HashMap<Integer,Integer>();
+        final Map<Integer,Integer> visited = new HashMap<Integer,Integer>();
         idToArticle.keySet().forEach(x -> visited.put(x, null));
 
-        Queue<Integer> q = new ArrayDeque<Integer>();
-        for (Integer curr = end; curr != null; curr = q.poll()) {
+        final Queue<Integer> q = new ArrayDeque<Integer>();
 
-            if (curr.equals(start)) {
-                Stream.Builder<Integer> bob = Stream.builder();
+        return
+            Optional.fromNull(
+                Stream.iterate(end, x -> {
+                    getNeighbors(curr).forEach(y -> {
+                        if (visited.get(y) == null) {
+                            visited.put(y, tmp);
+                            q.add(y);
+                        });
+                        return q.poll();
+                    }
+                )}.filter(x -> !x.equals(start) && x != null)
+                .findFirst()
+            ).map(dummy ->
+                final Stream.Builder<Integer> bob = Stream.builder();
                 Stream.iterate(start, x -> visited.get(x))
                     .peek(bob)
                     .allMatch(x -> !x.equals(end));
-                return Optional.of(bob.build().map(x -> idToArticle.get(x)));
-            }
-                    
-            // Feels a bit hacky, but only final (or 'effectivly final')
-            // vars can be in lambdas.
-            final Integer tmp = curr;
-            getNeighbors(curr).forEach(x -> {
-                if (visited.get(x) == null) {
-                    visited.put(x, tmp);
-                    q.add(x);
-                }
-            });
-        }
-        return Optional.empty();
+                return bob.build().map(x -> idToArticle.get(x));
+            );
     }
 
     private Optional<Stream<String>> travelThrough(String start, String middle, String end) {
         return travel(start, middle).flatMap(xi ->
                     travel(middle, end).map(yi ->
                         Stream.concat(xi, yi.skip(1))
-                    )
-               );
-    }
+    ));}
 
-    public String get() { return articles[gen.nextInt(articles.length)]; }
-
-    private static Function<String,String> safeDecode = x -> {
-        try { return URLDecoder.decode(x, "UTF-8"); }
+    private static String safeDecode(String code) {
+        try { return URLDecoder.decode(code, "UTF-8"); }
         catch (Exception e) {
-            System.err.println("Problem decoding " + x);
+            System.err.println("Problem decoding " + code);
             return "(error)";
         }
-    };
-
-    static String prettyPath(Optional<Stream<String>> path) {
-        return path.map(x ->
-                x.map(safeDecode)
-                 .reduce((y, z) -> y + " --> " + z)
-                 // Generally frowned upon, but it is clear enough
-                 // that travel never returns an empty stream
-                 .get()
-            ).orElse("No path found.");
     }
 
-    // TODO print length of path
     public static void main(String[] args) {
-        try {
-            PathFinder test = new PathFinder(args[0], args[1]);
-            String a1 = test.get();
-            String a2 = test.get();
-            String message = "Path from " + safeDecode.apply(a1) + " to " + safeDecode.apply(a2);
-            String path = null;
+
+        if (args.length == 2 || args.length == 3 && args[2].equals("useIntermediateNode")) {
+
+            final PathFinder finder = new PathFinder(args[0], args[1]);
+
+            final String[] articles = articleToId.keySet().toArray();
+            final Iterator<String> randicles = (new Random()).ints(0, articles.length).iterator;
+
+            final String a1 = randicles.next();
+            final String a2 = randicles.next();
+            final String a3 = randicles.next();
+
+            final String message;
+            final String path;
+
             if (args.length == 2) {
-                path = prettyPath(test.travel(a1, a2));
+                path = travel(a1, a2);
+                message = "Path from " + safeDecode(a1) + " to " + safeDecode(a3);
             } else if (args.length == 3 && args[2].equals("useIntermediateNode")) {
-                String a3 = test.get();
-                message += " through " + safeDecode.apply(a3);
-                path = prettyPath(test.travelThrough(a1, a3, a2));
-            } else throw new RuntimeException();
-            System.out.println(message + ", length = " + 0 + "\n" + path);
-        } catch (Exception e) {
-            System.err.println(e);
-        }
+                path = travelThrough(a1, a2, a3);
+                message = "Path from " + safeDecode(a1) + " through " + a2 + " to " + safeDecode(a2);
+            }
+
+            System.out.print(
+                message + path.map(x ->
+                    x.map(safeDecode)
+                     .reduce((y, z) -> y + " --> " + z)
+                     .get()
+                ).orElse("\nNo path found :(")
+            );
+        } else System.err.println("Please check your arguments");
     }
+
 
     /**
      * Returns the length of the shortest path from node1 to node2. If no path exists,
@@ -167,6 +171,7 @@ public class PathFinder extends MysteryUnweightedGraphImplementation implements 
      * This may not be the absolute shortest path between node1 and node2, but should be
      * a shortest path given the constraint that intermediateNodeAppears in the path.
      * @param node1 name of the starting article node
+     * @param intermediateNode name of the middle article node
      * @param node2 name of the ending article node
      * @return list that has node1 at position 0, node2 in the final position, and the names of each node
      *      on the path (in order) in between.
