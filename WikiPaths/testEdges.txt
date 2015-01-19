@@ -1,0 +1,24 @@
+# The test list of articles
+# These are placeholder names, only for testing PathFinder
+
+# The graph that this file generates consists of:
+#   A one-way, infinite cycle from A through E
+#   An edge (effectively a shortcut) from A to E
+#   A two-way edge between F and G
+#   No connections between H and anything else
+
+# Important cases to look out for:
+#   A -> E
+#   H <-> x
+#   {F, G} <-> {A - E}
+
+A	B
+B	C
+C	D
+D	E
+E	A
+
+A	E
+
+F	G
+G	F
