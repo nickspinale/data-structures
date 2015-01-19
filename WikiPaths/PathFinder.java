@@ -22,19 +22,57 @@ import java.util.function.*;
  * Furthermore, in the spirit of 'provability', this file has 0 explicitly
  * recursive functions.
  *
- * LESS IMPORTANT NOTE: Variables whose names end in the capital letter
- * 'M' are the 'maybe' versions of their 'M'-less relatives (i.e., they
- * are Optionals). For example, if 'number' is of type Integer, then
- * 'numberM' is of type Optional<Integer>, and is probably related in
- * some important way (most likely it they are part of the same monadic
- * sequence of bindings).
+ * Harnessing the expressive power of these new features has resulted in
+ * less 'bloated' code. Fewer characters mean more. As a resul, I have
+ * tried to include enough comments to explain the use of all these
+ * abstractions. Becasue this file has more comments than code, I have
+ * included in my submission for this assigment a comment-free (but
+ * otherwise identical) version of this class. It is called 'rawcode.java'
+ * (it will not compile because its name is not the name of the main class,
+ * but it has the .java extenstion so that it will be properly highlighted
+ * by your editor).
+ *
+ * Variables whose names end in the capital letter 'M' are the 'maybe'
+ * versions of their 'M'-less relatives (i.e., they are Optionals). For
+ * example, if 'number' is of type Integer, then 'numberM' is of type
+ * Optional<Integer>, and is probably related in some important way (most
+ * likely it they are part of the same monadic sequence of bindings). 
+ * Also, scope in this sort of code (less statement-oriented) can get
+ * confusing. To help with that, all variables and methods whose scope
+ * is the entire class have slash-star style comments above them, while
+ * all other comments are slach-slash styel.
  */
 
 public class PathFinder extends MysteryUnweightedGraphImplementation {
 
-    // Maps for article - id pairs, going in both directions
+    /* Maps for article - id pairs, going in both directions
+     */
     private final Map<String,Integer> articleToId;
     private final Map<Integer,String> idToArticle;
+
+    /* Processes files according to an action
+     */
+    private void process (String file, Consumer<String> consumer) {
+        try {
+            (new BufferedReader(new FileReader (new File(file))))
+                .lines()
+                // Ignore empty lines and comments
+                .filter(line -> !line.equals("") && line.charAt(0) != '#')
+                // Do specified action
+                .forEach(consumer);
+        } catch(Exception e) {
+            // I assume that, because the constructor's typesignature was given to
+            // us, it cannot throw exceptions. I saw two options, then. The
+            // first was having the instance variables articleToId and idToArticle
+            // be optionals. That way issues with files only had to be dealt with
+            // when these maps (theoreticlly the only things affected by such failures)
+            // were used. However, that would have complicated every single method
+            // quite a bit. So, the other option I saw (which is what you see below)
+            // was just to exit. Given the usage of this class, that works fine.
+            System.err.println("Problem processing " + file + "...\n..." + e);
+            System.exit(0);
+        }
+    }
 
     /**
      * Constructs a PathFinder that represents the graph with nodes (vertices) specified as in
@@ -48,25 +86,13 @@ public class PathFinder extends MysteryUnweightedGraphImplementation {
         articleToId = new HashMap<String,Integer>();
         idToArticle = new HashMap<Integer,String>();
 
-        final BiConsumer<String,Consumer<String>> processor = (file, consumer) -> {
-            try {
-                (new BufferedReader(new FileReader (new File(file))))
-                    .lines()
-                    // Ignore empty lines and comments
-                    .filter(line -> !line.equals("") && line.charAt(0) != '#')
-                    // Do specified action
-                    .forEach(consumer);
-            } catch(Exception e) {
-                System.err.println("Problem with file: " + file + ".../n..." + e);
-            }
-        };
-        processor.accept(nodeFile, line -> {
+        process(nodeFile, line -> {
             // Populate articles initialized above
             Integer id = addVertex();
             articleToId.put(line, id);
             idToArticle.put(id, line);
         });
-        processor.accept(edgeFile, line -> {
+        process(edgeFile, line -> {
             // Parse and add links to graph
             String[] links = line.split("\t");
             addEdge(articleToId.get(links[0]), articleToId.get(links[1]));
@@ -75,7 +101,11 @@ public class PathFinder extends MysteryUnweightedGraphImplementation {
 
     /* Core search method. Takes two articles (as names), and returns an
      * optional: the shortest path between them (as a stream of article names),
-     * if such a path exists.
+     * if such a path exists. NOTE: this stream is the path in reverse order,
+     * becasue backtracking is much easier that way. It is trivial to print it
+     * in the correct direction by designing the binary operator for reduce()
+     * (see the main method for that), and the list wrapper ('listify()') uses
+     * Collections.reverse().
      */
     private Optional<Stream<String>> travel(String starticle, String endicle) {
 
@@ -98,9 +128,7 @@ public class PathFinder extends MysteryUnweightedGraphImplementation {
         // Infinite (lazy evaluated) repitition of the breadth-first
         // iteration that we have talked about in class. Optionals allow us
         // to operate indefinitly on q without worrying about null values.
-        // Note how we start at the end so that when we 'backtrack' using
-        // visited, we end up with the steps in the correct order.
-        return Stream.iterate(Optional.of(end), stepM ->
+        return Stream.iterate(Optional.of(start), stepM ->
 
             // Unwrap the result of the last iteration (which exists only
             // if the last iteration did not use up the last item in q).
@@ -123,22 +151,19 @@ public class PathFinder extends MysteryUnweightedGraphImplementation {
 
         // 'findFirst()' is a short-circuiting, terminal operation. So, this
         // combination is effectively a 'findFirstThat()' sort of thing.
+        // 'findFirst()' returns an optional, which makes sense for finite
+        // streams. However, this is an infinite stream, so findFirst
+        // would never return empty. So, the generally frowned-upon
+        // operation get() is safe under these circumstances.
         .filter(stepM ->
-            // Contents equal to start means we found a path!
-            stepM.map(step -> step.equals(start))
+            // Contents equal to end means we found a path!
+            stepM.map(step -> step.equals(end))
             // Empty means no path, so short-circuit
             .orElse(true)
-        )
-        .findFirst()
-
-        // findFirst() returns an optional (makes sense for finite
-        // streams. However, this is an infinite stream, so findFirst
-        // would never return empty. So, this generally frowned-upon
-        // operation is safe under these circumstances.
-        .get()
+        ).findFirst().get()
 
         // 'dummy' is not used in the body of its lambda. This construction is
-        // analogous to the monadic '>>' (as opposed to '>>='). The 'phantom bind'.
+        // analogous to the monadic '>>' (as opposed to '>>='), the 'phantom bind'.
         // Basically, the computation proceeds if the search stopped with a result,
         // rather than an empty q.
         .map(dummy -> {
@@ -151,9 +176,9 @@ public class PathFinder extends MysteryUnweightedGraphImplementation {
             // builder) are the ones up to and including the first occurence of
             // start.
             final Stream.Builder<Integer> bob = Stream.builder();
-            Stream.iterate(start, step -> visited.get(step).get())
+            Stream.iterate(end, step -> visited.get(step).get())
                   .peek(bob)
-                  .allMatch(step -> !step.equals(end));
+                  .allMatch(step -> !step.equals(start));
 
             // This function takes and returns article names (becasue that way
             // other methods don't have to worry at all about id's), so we map
@@ -172,6 +197,19 @@ public class PathFinder extends MysteryUnweightedGraphImplementation {
                         Stream.concat(x, y.skip(1))
     ));}
 
+    /* A function object for decoding url-compatible strings. For the
+     * sake of speed, strings are only decoded when they are about to
+     * be displayed (rather than during the creation of 'articleToId'
+     * and 'idToArticle', in which case ALL articles would be decoded).
+     * An object rather than a method for use with streams.
+     */
+    final private static Function<String,String> safeDecode = x -> {
+        try { return URLDecoder.decode(x, "UTF-8"); }
+        catch(Exception e) {
+            System.err.println("Problem decoding " + x);
+            return "(error)";
+        }
+    };
 
     /* Given two files (one for articles and one for links), main finds and
      * pretty-prints the shortest path between two random articles (with another
@@ -180,90 +218,81 @@ public class PathFinder extends MysteryUnweightedGraphImplementation {
      */
     public static void main(String[] args) {
 
-        // Input is valid in and only in these two cases
-        if(args.length == 2 || args.length == 3 && args[2].equals("useIntermediateNode")) {
+        // Input in only two cases. It is convenient to check that here, before
+        // doing anything else (becasue that allows us to immidiatly do things
+        // that are common to, and only possible in, the correct input cases).
+        if(args.length != 2 && (args.length != 3 && args[2].equals("useIntermediateNode"))) {
+            System.out.println("Please check your arguments");
+            return;
+        }
+            
+        // Instantiate this class
+        final PathFinder finder = new PathFinder(args[0], args[1]);
 
-            // Instantiate this class
-            final PathFinder finder = new PathFinder(args[0], args[1]);
+        // Array of all articles. Set's 'toArray' requires a token array of the desired
+        // return type, unless that type is Object.
+        final String[] articles = finder.articleToId.keySet().toArray(new String[0]);
 
-            // Array of all articles. Set's 'toArray' requires a token array of the desired
-            // return type, unless that type is Object.
-            final String[] articles = finder.articleToId.keySet().toArray(new String[0]);
+        // There is no way to choose articles in an empty vertex file. This is
+        // (I think) the only instance where a file would break the program.
+        if(articles.length == 0) {
+            System.out.println("Empty vertex file. Unable to choose vertecies.");
+            return;
+        }
 
-            // An iterator that generates random articles
-            final Iterator<String> randicles = (new Random())
-                .ints(0, articles.length)
-                .mapToObj(x -> articles[x])
-                .iterator();
+        // An iterator that generates random articles
+        final Iterator<String> randicles = (new Random())
+            .ints(0, articles.length)
+            .mapToObj(x -> articles[x])
+            .iterator();
 
-            // Three random articles
-            final String a1 = randicles.next();
-            final String a2 = randicles.next();
-            final String a3 = randicles.next();
+        // Three random articles
+        final String a1 = randicles.next();
+        final String a2 = randicles.next();
+        final String a3 = randicles.next();
 
-            // The base message of the output
-            final String message;
+        // The base message of the output
+        final String message;
 
-            // The path that will be formatted for output
-            final Optional<Stream<String>> path;
+        // The path that will be formatted for output
+        final Optional<Stream<String>> path;
 
-            // A function object for decoding url-compatible strings. For the
-            // sake of speed, strings are only decoded when they are about to
-            // be displayed (rather than during the creation of 'articleToId'
-            // and 'idToArticle', in which case ALL articles would be decoded).
-            // An object rather than a method for use with streams.
-            final Function<String,String> safeDecode = x -> {
-                try { return URLDecoder.decode(x, "UTF-8"); }
-                catch(Exception e) {
-                    System.err.println("Problem decoding " + x);
-                    return "(error)";
-                }
-            };
+        // Initialize message and path according to whether the user instructed
+        // the use of an intermediate node
+        if(args.length == 2) {
+            path = finder.travel(a1, a3);
+            message = "Path from " + safeDecode.apply(a1) + " to " + safeDecode.apply(a3);
+        } else {
+            path = finder.travelThrough(a1, a2, a3);
+            message = "Path from " + safeDecode.apply(a1) + " through " + safeDecode.apply(a2) + " to " + safeDecode.apply(a3);
+        }
 
-            // Initialize message and path according to whether the user instructed
-            // the use of an intermediate node
-            if(args.length == 2) {
-                path = finder.travel(a1, a3);
-                message = "Path from " + safeDecode.apply(a1) + " to " + safeDecode.apply(a3);
-            } else {
-                path = finder.travelThrough(a1, a2, a3);
-                message = "Path from " + safeDecode.apply(a1) + " through " + safeDecode.apply(a2) + " to " + safeDecode.apply(a3);
-            }
+        // The pretty-printed version of path (if it exists).
+        // Again, get() is generally frowned upon, but from 'tavel', it is clear
+        // that the path is never empty. Also, note how it reverses the stream's
+        // order.
+        final Optional<String> arrowsM = path.map(p -> p
+                .map(safeDecode)
+                .reduce((x, y) -> y + " --> " + x)
+                .get()
+         );
 
-            // The pretty-printed version of path (if it exists)
-            final Optional<String> arrowsM = path.map(p ->
-                    p.map(safeDecode)
-                     .reduce((x, y) -> x + " --> " + y)
-                     // Generally frowned upon, but from 'tavel', it is clear
-                     // that the path is never empty
-                     .get()
-             );
-
-            // Information combined into final output
-            System.out.println( "\n#\t" + message + ":\n#\t" +
-                arrowsM.map(arrows ->
-                    "Length = "
-                  // This is obviously not ideal. While it appears to be
-                  // sketchy, it is, surprisingly, absolutly guarenteed
-                  // to be safe, under the condition that input files are
-                  // formatted to be compatible with URL's (because such
-                  // files would not contain any (non-commented) spaces.
-                  // This approach was taken because count() is a terminal
-                  // operation, and there is no nice way to copy a stream
-                  // (to count one of them) - I suppose that makes sense.
-                  // I just see this ugly counting strategy to be a trade-off
-                  // of (what I consider to be) the otherwise very appropriate
-                  // use of streams.
-                  // TL;DR while it looks ugly, this split->length thing
-                  // is actually safe, and is kinda the only way.
-                   + (arrows.split(" --> ").length - 1)
-                   + "\n#\t"
-                   + arrows
-                ).orElse("No path found :(") + "\n"
-            );
-
-        // An incorect number/combination of arguments must have been supplied
-        } else System.err.println("Please check your arguments");
+        // Information combined into final output. This approach to calculating
+        // the length of the path is obviously not ideal. While it appears to be
+        // sketchy, it is, surprisingly, absolutly guarenteed to be safe, under
+        // the condition that input files are formatted to be compatible with
+        // URL's (because such files would not contain any (non-commented)
+        // spaces. This approach was taken because count() is a terminal operation,
+        // and there is no nice way to copy a stream (to count one of them) - I
+        // suppose that makes sense. I just see this ugly counting strategy to
+        // be a trade-off of (what I consider to be) the otherwise very appropriate
+        // use of streams. TL;DR while it looks ugly, this split->length thing
+        // is actually safe, and is kinda the only way.
+        System.out.println("\n#\t" + message + ":\n#\t" +
+            arrowsM.map(arrows ->
+                "Length = " + (arrows.split(" --> ").length - 1) + "\n#\t" + arrows
+            ).orElse("No path found :(")
+        + "\n");
     }
 
 
@@ -282,6 +311,13 @@ public class PathFinder extends MysteryUnweightedGraphImplementation {
                 .orElse(0) - 1;
     }
 
+    // Turns a stream into a list of its elements in reverse order
+    final private static Function<Stream<String>,List<String>> listify = x -> {
+        List<String> list = x.collect(Collectors.toList());
+        Collections.reverse(list);
+        return list;
+    };
+
     /**
      * Returns a shortest path from node1 to node2, represented as list that has node1 at
      * position 0, node2 in the final position, and the names of each node on the path
@@ -293,9 +329,7 @@ public class PathFinder extends MysteryUnweightedGraphImplementation {
      * Just a list wrapper for travel()
      */
     public List<String> getShortestPath(String node1, String node2) {
-        return travel(node1, node2)
-                .map(x -> x.collect(Collectors.toList()))
-                .orElse(null);
+        return travel(node1, node2).map(listify).orElse(null);
     }
 
     /**
@@ -311,8 +345,6 @@ public class PathFinder extends MysteryUnweightedGraphImplementation {
      * Just a list wrapper for travelThrough()
      */
     public List<String> getShortestPath(String node1, String intermediateNode, String node2) {
-        return travelThrough(node1, intermediateNode, node2)
-                .map(x -> x.collect(Collectors.toList()))
-                .orElse(null);
+        return travelThrough(node1, intermediateNode, node2).map(listify).orElse(null);
     }
 }
