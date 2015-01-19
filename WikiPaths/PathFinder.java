@@ -1,18 +1,31 @@
-/**
- * how many comments?
- * what should lists be if no path?
- * printing numbers weird, ok?
- *
- */
-
 import java.io.*;
 import java.net.URLDecoder;
 import java.util.*;
 import java.util.stream.*;
 import java.util.function.*;
 
+/**
+ * Nick Spinale 
+ * CS 201, HW 6
+ * January 30, 2015.
+ *
+ * This is an unweighted, directed graph implementation specifically
+ * designed for the analysis of a subset of wikipedia's internal link
+ * structure.
+ *
+ * IMPORTANT NOTE: While this class does not look like 'typical Java',
+ * it is in no way obfuscated, neither intentionally nor otherwise.
+ * It just takes advantage of the expressive power of some of Java 8's
+ * new features (namely, streams, optional values, new-style iterables,
+ * and functional interfaces). In the spirit of functional programming,
+ * this file has 0 explicit loops, and all variables are declared as final.
+ * Furthermore, in the spirit of 'provability', this file has 0 explicitly
+ * recursive functions.
+ */
+
 public class PathFinder extends MysteryUnweightedGraphImplementation {
 
+    // Maps for article name - integer id pairs.
     private final Map<String,Integer> articleToId;
     private final Map<Integer,String> idToArticle;
 
@@ -60,11 +73,17 @@ public class PathFinder extends MysteryUnweightedGraphImplementation {
         }
     }
 
+    /* Core search method. Takes two articles (as names), and returns the
+     * shortest path between them (as a stream of article names), if such
+     * a path exists
+     */
     private Optional<Stream<String>> travel(String starticle, String endicle) {
 
+        // Input's representation within the graph
         final Integer start = articleToId.get(starticle);
         final Integer end = articleToId.get(endicle);
 
+        // For 
         final Map<Integer,Integer> visited = new HashMap<Integer,Integer>();
         idToArticle.keySet().forEach(x -> visited.put(x, null));
 
@@ -72,22 +91,22 @@ public class PathFinder extends MysteryUnweightedGraphImplementation {
 
         return
             Optional.ofNullable(
-                Stream.iterate(end, x -> {
-                    getNeighbors(x).forEach(y -> {
-                        if (visited.get(y) == null) {
-                            visited.put(y, x);
-                            q.add(y);
+                Stream.iterate(end, step -> {
+                    getNeighbors(step).forEach(neighbor -> {
+                        if (visited.get(neighbor) == null) {
+                            visited.put(neighbor, step);
+                            q.add(neighbor);
                         }});
                     return q.poll();
-                }).filter(y -> !y.equals(start) && y != null)
+                }).filter(step -> step.equals(start) || step == null)
                 .findFirst()
                 .get()
             ).map(dummy -> {
                 final Stream.Builder<Integer> bob = Stream.builder();
-                Stream.iterate(start, x -> visited.get(x))
+                Stream.iterate(start, step -> visited.get(step))
                     .peek(bob)
-                    .allMatch(x -> !x.equals(end));
-                return bob.build().map(x -> idToArticle.get(x));
+                    .allMatch(step -> !step.equals(end));
+                return bob.build().map(id -> idToArticle.get(id));
             });
     }
 
@@ -107,12 +126,14 @@ public class PathFinder extends MysteryUnweightedGraphImplementation {
 
     public static void main(String[] args) {
 
+        // final PathFinder finder = new PathFinder(args[0], args[1]);
+        // finder.travel("Honey", "Beetle").get().forEach(x -> System.out.println(x));
+
         if (args.length == 2 || args.length == 3 && args[2].equals("useIntermediateNode")) {
 
             final PathFinder finder = new PathFinder(args[0], args[1]);
 
-            final String[] dummy = {""};
-            final String[] articles = finder.articleToId.keySet().toArray(dummy);
+            final String[] articles = finder.articleToId.keySet().toArray(new String[0]);
             final Iterator<String> randicles = (new Random())
                 .ints(0, articles.length)
                 .mapToObj(x -> articles[x])
@@ -126,23 +147,26 @@ public class PathFinder extends MysteryUnweightedGraphImplementation {
             final Optional<Stream<String>> path;
 
             if (args.length == 2) {
-                path = finder.travel(a1, a2);
+                path = finder.travel(a1, a3);
                 message = "Path from " + safeDecode.apply(a1) + " to " + safeDecode.apply(a3);
-            } else if (args.length == 3 && args[2].equals("useIntermediateNode")) {
-                path = finder.travelThrough(a1, a2, a3);
-                message = "Path from " + safeDecode.apply(a1) + " through " + safeDecode.apply(a2) + " to " + safeDecode.apply(a2);
             } else {
-                path = null;
-                message = null;
+                path = finder.travelThrough(a1, a2, a3);
+                message = "Path from " + safeDecode.apply(a1) + " through " + safeDecode.apply(a2) + " to " + safeDecode.apply(a3);
             }
-
-            System.out.print(
-                message + path.map(x ->
-                    x.map(safeDecode)
-                     .reduce((y, z) -> y + " --> " + z)
+            
+            final String arrows = path.map(p ->
+                    p.map(safeDecode)
+                     .reduce((x, y) -> x + " --> " + y)
                      .get()
-                ).orElse("\nNo path found :(")
-            );
+            ).orElse("\nNo path found :(");
+
+            System.out.println( message
+                              + ", length = "
+                              + arrows.split(" --> ").length
+                              + "\n"
+                              + arrows
+                              );
+
         } else System.err.println("Please check your arguments");
     }
 
