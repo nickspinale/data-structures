@@ -11,7 +11,7 @@ import java.util.*;
 import java.util.stream.*;
 import java.util.function.*;
 
-public class PathFinder extends MysteryUnweightedGraphImplementation implements Supplier<String> {
+public class PathFinder extends MysteryUnweightedGraphImplementation {
 
     private final Map<String,Integer> articleToId;
     private final Map<Integer,String> idToArticle;
@@ -43,6 +43,7 @@ public class PathFinder extends MysteryUnweightedGraphImplementation implements 
             // Buffered reader initialization failure indicates issues with file
             System.err.println("Problem with file: " + nodeFile + ".../n..." + e);
         }
+
         try {
             (new BufferedReader(new FileReader (new File(edgeFile))))
                 .lines()
@@ -70,24 +71,24 @@ public class PathFinder extends MysteryUnweightedGraphImplementation implements 
         final Queue<Integer> q = new ArrayDeque<Integer>();
 
         return
-            Optional.fromNull(
+            Optional.ofNullable(
                 Stream.iterate(end, x -> {
-                    getNeighbors(curr).forEach(y -> {
+                    getNeighbors(x).forEach(y -> {
                         if (visited.get(y) == null) {
-                            visited.put(y, tmp);
+                            visited.put(y, x);
                             q.add(y);
-                        });
-                        return q.poll();
-                    }
-                )}.filter(x -> !x.equals(start) && x != null)
+                        }});
+                    return q.poll();
+                }).filter(y -> !y.equals(start) && y != null)
                 .findFirst()
-            ).map(dummy ->
+                .get()
+            ).map(dummy -> {
                 final Stream.Builder<Integer> bob = Stream.builder();
                 Stream.iterate(start, x -> visited.get(x))
                     .peek(bob)
                     .allMatch(x -> !x.equals(end));
                 return bob.build().map(x -> idToArticle.get(x));
-            );
+            });
     }
 
     private Optional<Stream<String>> travelThrough(String start, String middle, String end) {
@@ -96,13 +97,13 @@ public class PathFinder extends MysteryUnweightedGraphImplementation implements 
                         Stream.concat(xi, yi.skip(1))
     ));}
 
-    private static String safeDecode(String code) {
-        try { return URLDecoder.decode(code, "UTF-8"); }
+    private static final Function<String,String> safeDecode = x -> {
+        try { return URLDecoder.decode(x, "UTF-8"); }
         catch (Exception e) {
-            System.err.println("Problem decoding " + code);
+            System.err.println("Problem decoding " + x);
             return "(error)";
         }
-    }
+    };
 
     public static void main(String[] args) {
 
@@ -110,22 +111,29 @@ public class PathFinder extends MysteryUnweightedGraphImplementation implements 
 
             final PathFinder finder = new PathFinder(args[0], args[1]);
 
-            final String[] articles = articleToId.keySet().toArray();
-            final Iterator<String> randicles = (new Random()).ints(0, articles.length).iterator;
+            final String[] dummy = {""};
+            final String[] articles = finder.articleToId.keySet().toArray(dummy);
+            final Iterator<String> randicles = (new Random())
+                .ints(0, articles.length)
+                .mapToObj(x -> articles[x])
+                .iterator();
 
             final String a1 = randicles.next();
             final String a2 = randicles.next();
             final String a3 = randicles.next();
 
             final String message;
-            final String path;
+            final Optional<Stream<String>> path;
 
             if (args.length == 2) {
-                path = travel(a1, a2);
-                message = "Path from " + safeDecode(a1) + " to " + safeDecode(a3);
+                path = finder.travel(a1, a2);
+                message = "Path from " + safeDecode.apply(a1) + " to " + safeDecode.apply(a3);
             } else if (args.length == 3 && args[2].equals("useIntermediateNode")) {
-                path = travelThrough(a1, a2, a3);
-                message = "Path from " + safeDecode(a1) + " through " + a2 + " to " + safeDecode(a2);
+                path = finder.travelThrough(a1, a2, a3);
+                message = "Path from " + safeDecode.apply(a1) + " through " + safeDecode.apply(a2) + " to " + safeDecode.apply(a2);
+            } else {
+                path = null;
+                message = null;
             }
 
             System.out.print(
