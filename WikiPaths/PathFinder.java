@@ -221,7 +221,7 @@ public class PathFinder extends MysteryUnweightedGraphImplementation {
         // Input in only two cases. It is convenient to check that here, before
         // doing anything else (becasue that allows us to immidiatly do things
         // that are common to, and only possible in, the correct input cases).
-        if(args.length != 2 && (args.length != 3 && args[2].equals("useIntermediateNode"))) {
+        if(args.length != 2 || (args.length != 3 && args[2].equals("useIntermediateNode"))) {
             System.out.println("Please check your arguments");
             return;
         }
