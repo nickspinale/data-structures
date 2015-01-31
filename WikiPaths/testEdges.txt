@@ -8,9 +8,9 @@
 #   No connections between H and anything else
 
 # Important cases to look out for:
-#   A -> E
-#   H <-> x
-#   {F, G} <-> {A - E}
+#   A -> E should not go take the 'shortcut'
+#   H <-> x shound not exist for any x != H
+#   {F, G} <-> {A - E} shoud not exist
 
 A	B
 B	C
