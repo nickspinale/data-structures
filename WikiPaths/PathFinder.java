@@ -194,7 +194,7 @@ public class PathFinder extends MysteryUnweightedGraphImplementation {
     private Optional<Stream<String>> travelThrough(String start, String middle, String end) {
         return travel(start, middle).flatMap(x ->
                     travel(middle, end).map(y ->
-                        Stream.concat(x, y.skip(1))
+                        Stream.concat(y, x.skip(1))
     ));}
 
     /* A function object for decoding url-compatible strings. For the
