@@ -12,6 +12,12 @@
 #   H <-> x shound not exist for any x != H
 #   {F, G} <-> {A - E} shoud not exist
 
+# Some lengths (to fulfill the assignment's requirement)"
+#   A -> E = 1
+#   A -> D = 3
+#   B -> A = 4
+#   B -> H = NA
+
 A	B
 B	C
 C	D
