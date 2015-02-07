@@ -1,6 +1,9 @@
 import java.util.Optional.*
 
 public class SortedLinkedList implements SortedList<ZooAnimal> {
+
+    List<ZooAnimal> innards;
+
     /**
      * Adds item to the list in sorted order.
      */
@@ -62,77 +65,30 @@ public class SortedLinkedList implements SortedList<ZooAnimal> {
     }
 
     /** Returns an iterator that begins just before index 0 in this list. */
-    public Iterator<T> iterator();
+    public Iterator<ZooAnimal> iterator() {
+        return new Iterator<ZooAnimal> {
+
+            List<ZooAnimal> current;
+
+            public boolean hasNext() {
+                return current.isPresent();
+            }
+
+            public ZooAnimal next() {
+                try {
+                    Pair<T,List<T>> tmp = current.get();
+                    current = tmp.tail;
+                    return tmp.head;
+                } catch(Exception e) {
+                    throw new NoSuchElementException();
+                }
+            }
+        }
+    }
 
     /** Removes all items from the list. */
     public void clear() {
         innards = new List<ZooAnimal>;
-    }
-
-    List<ZooAnimal> innards;
-
-    private UnaryOperator<List<T>> insert(T e) {
-        return list -> list.get.map(x ->
-            x.head.compare(e) < 1
-            ? attach(insert(e), x)
-            : new List(e, list)
-        ).orElse(new List(e));
-    }
-
-    private Pair<Boolean,List<T>> unsert(T e, List<T> list) {
-        return list.get.map(x ->
-            x.head == e
-            ? new Pair(true, x.tail)
-            : .attach(cons(x.head), unsert(e, x.tail))
-        ).orElse(new Pair(false, list));
-    }
-
-    private Optional<Integer> lookup(Integer i, T val, List<T> list) {
-        return list.get.map(x ->
-            x.head == val
-            ? Optonal.of(i)
-            : lookup(i + 1, val, x.tail)
-        ).orElse(Optional.empty());
-    }
-
-    private Optional<T> index(Integer i, List<T> list) {
-        return list.get.map(x ->
-            i == 0
-            ? Optonal.of(x.head)
-            : index(i - 1, val, x.tail)
-        ).orElse(Optional.empty());
-
-    private boolean elem(T val, List<T> list) {
-        return list.get.map(x ->
-            val == x.head ? true : elem(val, x.tail)
-        ).orElse(false);
-    }
-
-    private int length(List<T> list) {
-        return list.get.map(x ->
-            1 + length(x.tail)
-        ).orElse(0);
-
-    private void confine(T[] arr, int i, List<T> list) {
-        list.ifPresent(x -> {
-            arr[i] = x.head;
-            confine(arr, i + 1, x.tail)
-        });
-    }
-
-    // private U listCase(List<T> list, U emptyCase, Function<Pair<T,List<T>>> operation) {
-    //     return list.get.map(operation).orElse(emptyCase);
-    // }
-
-    // YAY JAVA! CURRYING
-    // NOTE: Java's type signatures don't do so well with currying,
-    // so I would use the arguments and result to discern type.
-    private final UnaryOperator<List<T>> cons(T head) {
-        return tail -> new List(head, tail);
-    }
-
-    private Pair<F,S> attach(BinaryOperator<S> f, Pair<F,S> pair) {
-        return new Pair(pair.first, f.apply(pair.second));
     }
 }
 
@@ -141,27 +97,65 @@ private class List<T> {
 
     final Optional<Pair<T,List<T>>> get;
 
-    List() {
-        get = Optional.empty;
-    }
-
-    List(T head) {
-        get = Optional.of(new Pair(head, new List()));
-    }
-
     List(T head, List<T> tail) {
         get = Optional.of(new Pair(head, tail));
     }
+
+    U casify(U baseCase, Function<Pair<T,List<T>>,U> f) {
+        get.map(f).orElse(baseCase);
+    }
+
+    List<T> insert(T e) {
+        return casifiy(new List(e), x ->
+            x.head.compare(e) < 1 ? x.attach(y -> y.insert(e)) : new List(e, list)
+    );}
+
+    Pair<Boolean,List<T>> unsert(T e) {
+        return casify(new Pair(false, this), x ->
+            x.head == e ?
+            new Pair(true, x.tail) :
+            x.tail.unsert(e).attach(y -> new List<T>(x.head, y));
+    );}
+
+    Optional<Integer> lookup(Integer i, T val) {
+        return casify(Optional.empty(), x ->
+            x.head == val ? Optonal.of(i) : x.tail.lookup(i + 1, val)
+    );}
+
+    Optional<T> index(Integer i) {
+        return casify(Optional.empty(), x ->
+            i == 0 ? Optonal.of(x.head) : x.tail.index(i - 1, val)
+    );}
+
+    boolean elem(T val) {
+        return casify(false, x ->
+            val == x.head ? true : x.tail.elem(val)
+    );}
+
+    int length() {
+        return casify(0, x ->
+            1 + length(x.tail)
+    );}
+
+    void confine(T[] arr, int i) {
+        get.ifPresent(x -> {
+            arr[i] = x.head;
+            x.tail.confine(arr, i + 1)
+    });}
 }
 
 // A pair...
 private class Pair<F,S> {
 
-    final F first;
-    final S second;
+    final F head;
+    final S tail;
 
-    Pair(F first, S second) {
-        this.first = first;
-        this.second = second;
+    Pair(F head, S tail) {
+        this.head = head;
+        this.tail = tail;
+    }
+
+    Pair<F,S> attach(BinaryOperator<S> f) {
+        return new Pair(head, f.apply(tail));
     }
 }
