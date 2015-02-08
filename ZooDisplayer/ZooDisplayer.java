@@ -19,12 +19,12 @@ public class ZooDisplayer{
             try{
                 (new BufferedReader(new FileReader (new File(filePath))))
                     .lines()
-                    .forEach(line ->
+                    .forEach(line -> {
                         String[] params = line.split(",",-1);
                         // Make sure that line has correct number of fields.
                         if(params.length != 4){
                             System.out.println("Error in parsing. Skipping to next line.");
-                        } else{
+                        } else {
                             try{
                                 int birthYear = Integer.parseInt(params[2]);
                                 EzImage pic = new EzImage(new File(params[3]));
@@ -37,8 +37,8 @@ public class ZooDisplayer{
                                 System.out.println("Error in finding picture file. Skipping to next line.");
                             }
                         }
-                    );
-            } catch(FileNotFoundException e){
+                    });
+            } catch(FileNotFoundException e) {
                 System.out.println("Issue accessing file. Proceeding without file input.");
             }
         }
@@ -49,15 +49,15 @@ public class ZooDisplayer{
     }
 
     public void displayZooAsPicture(){
-        EzImage result = animals.get(0).getPic();
-        for(int i = 1; i < animals.size(); i++){
-            result = result.appendToRight(animals.get(i).getPic());
+        EzImage result = list.get(0).getPic();
+        for(int i = 1; i < list.size(); i++){
+            result = result.appendToRight(list.get(i).getPic());
         }
         result.show("Zoo");
     }
 
     public void addAnimal(ZooAnimal animal) {
-        zoo.list.add(animal);
+        list.add(animal);
     }
 
     /**
@@ -66,7 +66,7 @@ public class ZooDisplayer{
      */
     public static void main(String[] args){
 
-        ZooDisplayer zoo;
+        ZooDisplayer zoo = null;
 
         if(args.length == 0) {
             zoo = new ZooDisplayer(null);
@@ -80,18 +80,17 @@ public class ZooDisplayer{
         Scanner in = new Scanner(System.in);
         
         while(true) {
-            command = in.nextLine();
-            if(command.equals("add animal") {
+            String command = in.nextLine();
+            if(command.equals("add animal")) {
                 System.out.println("What is the species of the animal you're adding?");
                 String species = in.nextLine();
                 System.out.println("What is the animal's name");
                 String name = in.nextLine();
                 System.out.println("And in what year was " + name + " born?");
-                int year = askInt();
+                int year = askInt(in);
                 System.out.println("Where can I find a picture of " + name + "?");
-                EzImage img = askImg();
-                zoo.addAnimal(species, name, year, img);
-                }
+                EzImage img = askImg(in);
+                zoo.addAnimal(new ZooAnimal(species, name, year, img));
             } else if(command.equals("remove animal")) {
                 System.out.println("Which animal would you like to remove?");
                 String name = in.nextLine();
@@ -101,11 +100,11 @@ public class ZooDisplayer{
                         zoo.list.remove(zoo.list.get(i));
                     }
                 }
-                System.out.prinln(name + (spot < 0 ?  " was not found in the zoo." : " successfully removed."));
+                System.out.println(name + (spot < 0 ?  " was not found in the zoo." : " successfully removed."));
             } else if(command.equals("display text")) {
-                displayZooAsText();
+                zoo.displayZooAsText();
             } else if(command.equals("display picture")) {
-                displayZooAsPicture();
+                zoo.displayZooAsPicture();
             } else if(command.equals("exit")) {
                 System.out.println("Goodbye!");
                 System.exit(0);
@@ -116,20 +115,20 @@ public class ZooDisplayer{
         }
     }
 
-    private static int askInt() {
+    private static int askInt(Scanner in) {
         try { return in.nextInt(); }
-        catch {
+        catch(Exception e) {
             System.out.println("Error... Please enter an integer:");
             in.nextLine();
-            askInt();
+            return askInt(in);
         }
     }
 
-    private static EzImage askImg() {
+    private static EzImage askImg(Scanner in) {
         try { return new EzImage(in.nextLine()); }
-        catch {
+        catch(Exception e) {
             System.out.println("Error... Please enter valid path (e.g. \"/home/gerald/pictures/sammy.jpg\"):");
-            askImg();
+            return askImg(in);
         }
     }
 }
