@@ -1,14 +1,16 @@
-import java.util.Optional.*
+import java.util.*;
+import java.util.function.*;
+import java.util.Optional.*;
 
 public class SortedLinkedList implements SortedList<ZooAnimal> {
 
-    List<ZooAnimal> innards;
+    Cons<ZooAnimal> innards;
 
     /**
      * Adds item to the list in sorted order.
      */
-    public void add(T item) {
-        innards = insert.apply(item).apply(innards);
+    public void add(ZooAnimal item) {
+        innards = innards.insert(item);
     }
 
     /**
@@ -16,35 +18,35 @@ public class SortedLinkedList implements SortedList<ZooAnimal> {
      * one position.
      * @return true if the item was in the list, false otherwise
      */
-    public boolean remove(T targetItem) {
-        Pair<Boolean,ZooAnimal> pair = unsert.apply(targetItem, innards);
-        innards = pair.second;
-        return pair.first;
+    public boolean remove(ZooAnimal targetItem) {
+        Pair<Boolean,Cons<ZooAnimal>> pair = innards.unsert(targetItem);
+        innards = pair.tail;
+        return pair.head;
     }
 
     /**
      * Returns the position of targetItem in the list.
      * @return the position of the item, or -1 if targetItem is not i the list
      */
-    public int getPosition(T targetItem) {
-        return lookup(0, targetItem, innards).orElse(-1);
+    public int getPosition(ZooAnimal targetItem) {
+        return innards.lookup(0, targetItem).orElse(-1);
     }
 
     /** Returns the item at a given index.
-     * @return the item, or throw an IndexOutOfBoundsException if the index is out of bounds.
+     * @return the item, or throw an IndepairOutOfBoundsException if the index is out of bounds.
      */
-    public T get(int position) {
-        return index(position, innards).orElse(throw new IndexOutOfBoundsException());
+    public ZooAnimal get(int position) {
+        return innards.index(position).orElse((new ZooAnimal[0])[1]);
     }
 
     /** Returns true if the list contains the target item. */
-    public boolean contains(T targetItem) {
-        return elem(targetItem, innards);
+    public boolean contains(ZooAnimal targetItem) {
+        return innards.elem(targetItem);
     }
 
     /** Returns the length of the list: the number of items stored in it. */
     public int size() {
-        return length(innards);
+        return innards.length();
     }
 
     /** Returns true if the list has no items stored in it. */
@@ -59,93 +61,103 @@ public class SortedLinkedList implements SortedList<ZooAnimal> {
      *         stored in the list, in the same order.
      */
     public Object[] toArray() {
-        ZooAnimal[] arr = new ZooAnimal[innards.size()];
-        confine(arr, 0, innards);
+        ZooAnimal[] arr = new ZooAnimal[innards.length()];
+        innards.confine(arr, 0);
         return arr;
     }
 
     /** Returns an iterator that begins just before index 0 in this list. */
     public Iterator<ZooAnimal> iterator() {
-        return new Iterator<ZooAnimal> {
+        return new Iterator<ZooAnimal>() {
 
-            List<ZooAnimal> current;
+            Cons<ZooAnimal> current;
 
             public boolean hasNext() {
-                return current.isPresent();
+                return current.get.isPresent();
             }
 
             public ZooAnimal next() {
                 try {
-                    Pair<T,List<T>> tmp = current.get();
+                    Pair<ZooAnimal,Cons<ZooAnimal>> tmp = current.get.get();
                     current = tmp.tail;
                     return tmp.head;
                 } catch(Exception e) {
                     throw new NoSuchElementException();
                 }
             }
-        }
+        };
     }
 
     /** Removes all items from the list. */
     public void clear() {
-        innards = new List<ZooAnimal>;
+        innards = new Cons<ZooAnimal>();
     }
 }
 
-// If only type synonyms existed...
-private class List<T> {
+// If only type synonyms epairisted...
+class Cons<? extends Comparable<T>> {
 
-    final Optional<Pair<T,List<T>>> get;
+    final Optional<Pair<T,Cons<T>>> get;
 
-    List(T head, List<T> tail) {
+    Cons() {
+        get = Optional.empty();
+    }
+
+    Cons(T head) {
+        get = Optional.of(new Pair(head, Optional.empty()));
+    }
+
+    Cons(T head, Cons<T> tail) {
         get = Optional.of(new Pair(head, tail));
     }
 
-    U casify(U baseCase, Function<Pair<T,List<T>>,U> f) {
+    <U> U casify(U baseCase, Function<Pair<T,Cons<T>>,U> f) {
         get.map(f).orElse(baseCase);
     }
 
-    List<T> insert(T e) {
-        return casifiy(new List(e), x ->
-            x.head.compare(e) < 1 ? x.attach(y -> y.insert(e)) : new List(e, list)
+    Cons<T> insert(T e) {
+        return casify(new Cons(e), pair ->
+            pair.head.compare(e) < 1 ? pair.attach(x -> x.insert(e)) : new Cons(e, this)
     );}
 
-    Pair<Boolean,List<T>> unsert(T e) {
-        return casify(new Pair(false, this), x ->
-            x.head == e ?
-            new Pair(true, x.tail) :
-            x.tail.unsert(e).attach(y -> new List<T>(x.head, y));
+    Pair<Boolean,Cons<T>> unsert(T e) {
+        return casify(new Pair(false, this), pair ->
+            pair.head == e ?
+            new Pair(true, pair.tail) :
+            pair.tail.unsert(e).attach(x -> new Cons<T>(pair.head, x))
     );}
 
     Optional<Integer> lookup(Integer i, T val) {
-        return casify(Optional.empty(), x ->
-            x.head == val ? Optonal.of(i) : x.tail.lookup(i + 1, val)
+        return casify(Optional.empty(), pair ->
+            pair.head == val ?
+            Optional.of(i) :
+            (pair.head.compare(val) > 0 ? pair.tail.lookup(i + 1, val) : Optional.empty())
     );}
 
     Optional<T> index(Integer i) {
-        return casify(Optional.empty(), x ->
-            i == 0 ? Optonal.of(x.head) : x.tail.index(i - 1, val)
+        return casify(Optional.empty(), pair ->
+            i == 0 ? Optional.of(pair.head) : pair.tail.index(i - 1)
     );}
 
     boolean elem(T val) {
-        return casify(false, x ->
-            val == x.head ? true : x.tail.elem(val)
+        return casify(false, pair ->
+            val == pair.head ? true : pair.tail.elem(val)
     );}
 
     int length() {
-        return casify(0, x ->
-            1 + length(x.tail)
+        return casify(0, pair ->
+            1 + pair.tail.length()
     );}
 
     void confine(T[] arr, int i) {
-        get.ifPresent(x -> {
-            arr[i] = x.head;
-            x.tail.confine(arr, i + 1)
+        get.ifPresent(pair -> {
+            arr[i] = pair.head;
+            pair.tail.confine(arr, i + 1);
     });}
 }
 
 // A pair...
-private class Pair<F,S> {
+class Pair<F,S> {
 
     final F head;
     final S tail;
@@ -155,7 +167,7 @@ private class Pair<F,S> {
         this.tail = tail;
     }
 
-    Pair<F,S> attach(BinaryOperator<S> f) {
+    <T> Pair<F,T> attach(Function<S,T> f) {
         return new Pair(head, f.apply(tail));
     }
 }
