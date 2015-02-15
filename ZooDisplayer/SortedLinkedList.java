@@ -4,7 +4,7 @@ import java.util.Optional.*;
 
 public class SortedLinkedList implements SortedList<ZooAnimal> {
 
-    Cons<ZooAnimal> innards;
+    private Cons<ZooAnimal> innards;
 
     /**
      * Adds item to the list in sorted order.
@@ -95,7 +95,7 @@ public class SortedLinkedList implements SortedList<ZooAnimal> {
 }
 
 // If only type synonyms epairisted...
-class Cons<? extends Comparable<T>> {
+class Cons<T extends Comparable<T>> {
 
     final Optional<Pair<T,Cons<T>>> get;
 
@@ -111,43 +111,53 @@ class Cons<? extends Comparable<T>> {
         get = Optional.of(new Pair(head, tail));
     }
 
-    <U> U casify(U baseCase, Function<Pair<T,Cons<T>>,U> f) {
-        get.map(f).orElse(baseCase);
+    Cons<T> insert(T e) {
+        return get.map(pair ->
+            pair.head.compareTo(e) < 1
+          ? new Cons(pair.head, pair.tail.insert(e))
+          : new Cons(e, this)
+        ).orElse(new Cons(e));
     }
 
-    Cons<T> insert(T e) {
-        return casify(new Cons(e), pair ->
-            pair.head.compare(e) < 1 ? pair.attach(x -> x.insert(e)) : new Cons(e, this)
-    );}
-
     Pair<Boolean,Cons<T>> unsert(T e) {
-        return casify(new Pair(false, this), pair ->
-            pair.head == e ?
-            new Pair(true, pair.tail) :
-            pair.tail.unsert(e).attach(x -> new Cons<T>(pair.head, x))
-    );}
+        return get.map(pair -> {
+            if(pair.head == e) {
+                return new Pair(true, pair.tail);
+            } else {
+                final Pair<Boolean,Cons<T>> tmp = pair.tail.unsert(e);
+                return new Pair(tmp.head, new Cons<T>(pair.head, tmp.tail));
+            }
+        }).orElse(new Pair(false, this));
+    }
 
     Optional<Integer> lookup(Integer i, T val) {
-        return casify(Optional.empty(), pair ->
-            pair.head == val ?
-            Optional.of(i) :
-            (pair.head.compare(val) > 0 ? pair.tail.lookup(i + 1, val) : Optional.empty())
-    );}
+        return get.map(pair ->
+            pair.head == val
+          ? Optional.of(i)
+          : ( pair.head.compareTo(val) > 0
+            ? pair.tail.lookup(i + 1, val)
+            : Optional.<Integer>empty()
+            )
+        ).orElse(Optional.empty());
+    }
 
     Optional<T> index(Integer i) {
-        return casify(Optional.empty(), pair ->
+        return get.map(pair ->
             i == 0 ? Optional.of(pair.head) : pair.tail.index(i - 1)
-    );}
+        ).orElse(Optional.empty());
+    }
 
     boolean elem(T val) {
-        return casify(false, pair ->
+        return get.map(pair ->
             val == pair.head ? true : pair.tail.elem(val)
-    );}
+        ).orElse(false);
+    }
 
     int length() {
-        return casify(0, pair ->
+        return get.map(pair ->
             1 + pair.tail.length()
-    );}
+        ).orElse(0);
+    }
 
     void confine(T[] arr, int i) {
         get.ifPresent(pair -> {
@@ -165,9 +175,5 @@ class Pair<F,S> {
     Pair(F head, S tail) {
         this.head = head;
         this.tail = tail;
-    }
-
-    <T> Pair<F,T> attach(Function<S,T> f) {
-        return new Pair(head, f.apply(tail));
     }
 }
