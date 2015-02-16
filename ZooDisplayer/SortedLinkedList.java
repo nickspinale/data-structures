@@ -6,6 +6,10 @@ public class SortedLinkedList implements SortedList<ZooAnimal> {
 
     private Cons<ZooAnimal> innards;
 
+    SortedLinkedList() {
+        innards = new Cons<ZooAnimal>();
+    }
+
     /**
      * Adds item to the list in sorted order.
      */
@@ -67,23 +71,19 @@ public class SortedLinkedList implements SortedList<ZooAnimal> {
     }
 
     /** Returns an iterator that begins just before index 0 in this list. */
-    public Iterator<ZooAnimal> iterator() {
+    public Iterator<ZooAnimal> iterator() throws NoSuchElementException {
         return new Iterator<ZooAnimal>() {
 
             Cons<ZooAnimal> current;
 
             public boolean hasNext() {
-                return current.get.isPresent();
+                return current.get.map(((Pair<ZooAnimal,Cons<ZooAnimal>>) pair) -> pair.tail.isPresent().orElse(false).booleanValue();
             }
 
             public ZooAnimal next() {
-                try {
-                    Pair<ZooAnimal,Cons<ZooAnimal>> tmp = current.get.get();
-                    current = tmp.tail;
-                    return tmp.head;
-                } catch(Exception e) {
-                    throw new NoSuchElementException();
-                }
+                Pair<ZooAnimal,Cons<ZooAnimal>> tmp = current.get.get();
+                current = tmp.tail;
+                return tmp.head;
             }
         };
     }
@@ -104,30 +104,31 @@ class Cons<T extends Comparable<T>> {
     }
 
     Cons(T head) {
-        get = Optional.of(new Pair(head, Optional.empty()));
+        get = Optional.of(new Pair<T,Cons<T>>(head, new Cons<T>()));
     }
 
     Cons(T head, Cons<T> tail) {
-        get = Optional.of(new Pair(head, tail));
+        get = Optional.of(new Pair<T,Cons<T>>(head, tail));
     }
 
     Cons<T> insert(T e) {
+        System.out.println("HHHH");
         return get.map(pair ->
             pair.head.compareTo(e) < 1
-          ? new Cons(pair.head, pair.tail.insert(e))
-          : new Cons(e, this)
-        ).orElse(new Cons(e));
+          ? new Cons<T>(pair.head, pair.tail.insert(e))
+          : new Cons<T>(e, this)
+        ).orElse(new Cons<T>(e));
     }
 
     Pair<Boolean,Cons<T>> unsert(T e) {
         return get.map(pair -> {
             if(pair.head == e) {
-                return new Pair(true, pair.tail);
+                return new Pair<Boolean,Cons<T>>(true, pair.tail);
             } else {
                 final Pair<Boolean,Cons<T>> tmp = pair.tail.unsert(e);
-                return new Pair(tmp.head, new Cons<T>(pair.head, tmp.tail));
+                return new Pair<Boolean,Cons<T>>(tmp.head, new Cons<T>(pair.head, tmp.tail));
             }
-        }).orElse(new Pair(false, this));
+        }).orElse(new Pair<Boolean,Cons<T>>(false, this));
     }
 
     Optional<Integer> lookup(Integer i, T val) {
