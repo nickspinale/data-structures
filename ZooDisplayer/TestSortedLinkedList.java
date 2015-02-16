@@ -9,6 +9,19 @@ public class TestSortedLinkedList {
 
     public static void main(String[] args) {
 
+        ZooAnimal[] subjects = {
+            new ZooAnimal("jeff"  , "kangaroo", 13 , null) ,
+            new ZooAnimal("sam"   , "kangaroo", 999, null) ,
+            new ZooAnimal("mary"  , "lawyer"  , 1  , null) ,
+            new ZooAnimal("bob"   , "lawyer"  , 2  , null) ,
+            new ZooAnimal("gerald", "abcd"    , 1  , null) ,
+            new ZooAnimal("donnie", "abcz"    , 3  , null) ,
+            new ZooAnimal("kate"  , "d"       , 1  , null) ,
+            new ZooAnimal("biff"  , "c"       , 143, null) ,
+            new ZooAnimal("spike" , "b"       , 1  , null) ,
+            new ZooAnimal("walter", "a"       , 4  , null) ,
+        }
+
         SortedList<ZooAnimal> list = new MysterySortedListImplementation<ZooAnimal>();
 
         if(args.length == 1) {

@@ -60,7 +60,7 @@ public class ZooAnimal implements Comparable<ZooAnimal>{
         if(comparison != 0){
             return comparison;
         }
-        comparison= name.compareTo(other.getName());
+        comparison = name.compareTo(other.getName());
         if(comparison != 0){
             return comparison;
         }
