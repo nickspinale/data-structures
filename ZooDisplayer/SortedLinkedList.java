@@ -44,9 +44,15 @@ public class SortedLinkedList implements SortedList<ZooAnimal> {
 
     /** Returns the item at a given index.
      * @return the item, or throw an IndepairOutOfBoundsException if the index is out of bounds.
+     * Note that we don't use .ifPresent() because a throw doesn't satisfy the return requirement.
      */
     public ZooAnimal get(int position) {
-        return innards.index(position).orElse((new ZooAnimal[0])[1]);
+        Optional<ZooAnimal> tmp = innards.index(position);
+        if(tmp.isPresent()) {
+            return tmp.get();
+        } else {
+            throw new IndexOutOfBoundsException();
+        }
     }
 
     /** Returns true if the list contains the target item. */
@@ -82,16 +88,19 @@ public class SortedLinkedList implements SortedList<ZooAnimal> {
 
             Cons<ZooAnimal> current = innards;
 
+            // See below for an explanation of optionals
             public boolean hasNext() {
-                return current.get.map(pair ->
-                    pair.tail.get.isPresent()
-                ).orElse(false);
+                return current.get.isPresent();
             }
 
             public ZooAnimal next() {
                 Pair<ZooAnimal,Cons<ZooAnimal>> tmp = current.get.get();
                 current = tmp.tail;
                 return tmp.head;
+            }
+
+            public void remove() {
+                throw new UnsupportedOperationException();
             }
         };
     }
@@ -117,7 +126,7 @@ public class SortedLinkedList implements SortedList<ZooAnimal> {
  * In pseudocode, Optional T = Just T | Nothing
  *   Optional.of(e) => Just e
  *   Optional.empty() => Nothing
- *   opt.map(f) => case opt of   
+ *   opt.map(f) => case opt of
  *                   Just e -> Just f(e)
  *                   Nothing -> Nothing
  */

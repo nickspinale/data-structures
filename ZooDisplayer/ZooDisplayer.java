@@ -7,7 +7,9 @@ import java.util.stream.*;
  * Input is formatted as animal-species,animal-name,birth-day,image-file-location
  * and the user must specify both input file and "text" or "picture" mode. Handles incorrectly
  * formatted files by skipping problem lines.
+ * By Nick Spinale
  */
+
 public class ZooDisplayer{
 
     // This list will hold this particular zoo displayer's list of animals

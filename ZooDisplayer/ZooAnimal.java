@@ -3,6 +3,7 @@
  * age, name, and species.
  * Nick Spinale and Micah Nacht CS 201
  */
+
 public class ZooAnimal implements Comparable<ZooAnimal>{
 
     //Initialize class variables.
