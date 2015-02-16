@@ -4,8 +4,14 @@ import java.util.Optional.*;
 
 public class SortedLinkedList implements SortedList<ZooAnimal> {
 
+    // The sortedlinkedlist class is merely a SortedList-shaped wrapper
+    // for a Cons object. This is that Cons.
+    // I recommend looking at the Cons class before this one.
     private Cons<ZooAnimal> innards;
 
+    /**
+     * Constructor does nothing but initialize innards as an empty list.
+     */
     SortedLinkedList() {
         innards = new Cons<ZooAnimal>();
     }
@@ -74,10 +80,12 @@ public class SortedLinkedList implements SortedList<ZooAnimal> {
     public Iterator<ZooAnimal> iterator() throws NoSuchElementException {
         return new Iterator<ZooAnimal>() {
 
-            Cons<ZooAnimal> current;
+            Cons<ZooAnimal> current = innards;
 
             public boolean hasNext() {
-                return current.get.map(((Pair<ZooAnimal,Cons<ZooAnimal>>) pair) -> pair.tail.isPresent().orElse(false).booleanValue();
+                return current.get.map(pair ->
+                    pair.tail.get.isPresent()
+                ).orElse(false);
             }
 
             public ZooAnimal next() {
@@ -94,72 +102,119 @@ public class SortedLinkedList implements SortedList<ZooAnimal> {
     }
 }
 
-// If only type synonyms epairisted...
+/**
+ * This is basically a nice, purely functional linked list.
+ * This sort of list is defined as EITHER a pair consisting of a head (a value)
+ * and a tail (another list, of the sort being defined right now), OR nothing
+ * (the empty list). This is implemented using an optional. An optional
+ * parameterized over a type T is either a T or nothing (it is basically a wrapped
+ * reference that makes null values your friend). Example uses:
+ *   Optional.of(e) => a wrapper for e
+ *   Optional.empty() => a wrapped null value
+ *   opt.map(f) => if opt contains a value, returns an optional wrapping f(that value),
+                   otherwise does nothing (returns a wrapped null value, which is
+                   already is).
+ * In pseudocode, Optional T = Just T | Nothing
+ *   Optional.of(e) => Just e
+ *   Optional.empty() => Nothing
+ *   opt.map(f) => case opt of   
+ *                   Just e -> Just f(e)
+ *                   Nothing -> Nothing
+ */
 class Cons<T extends Comparable<T>> {
 
+    // The pair that this class wraps.
+    // NOTE this is final. Methods in this class return new cons' rather than
+    // altering themselves
     final Optional<Pair<T,Cons<T>>> get;
 
+    // Empty list
     Cons() {
         get = Optional.empty();
     }
 
+    // Singleton
     Cons(T head) {
         get = Optional.of(new Pair<T,Cons<T>>(head, new Cons<T>()));
     }
 
+    // Normal cons
     Cons(T head, Cons<T> tail) {
         get = Optional.of(new Pair<T,Cons<T>>(head, tail));
     }
 
+    /* Most of the following methods have this structure:
+     * f(x) = get.map(g).orElse(default), where x and default are of type U
+     * for some U, and g is of type Pair<T,Cons<T>> -> U. So basically,
+     * most of these methods have one behavior for the empty list, an
+     * another non-empty lists.
+     * If we are to use the same pseudocode as before, this looks like:
+     * f(x) = case get of
+     *          Just pair -> g(pair)
+     *          Nothing -> default
+     * Also, note that, as noted before, all of these methodsm return new objects.
+     */
+
     Cons<T> insert(T e) {
-        System.out.println("HHHH");
         return get.map(pair ->
-            pair.head.compareTo(e) < 1
-          ? new Cons<T>(pair.head, pair.tail.insert(e))
-          : new Cons<T>(e, this)
+            // If head is smaller than e, insert e here.
+            pair.head.compareTo(e) > 0
+          ? new Cons<T>(e, this)
+          : new Cons<T>(pair.head, pair.tail.insert(e))
         ).orElse(new Cons<T>(e));
     }
 
+    // This returns a pair that is (whether anything was removes, the resulting list)
     Pair<Boolean,Cons<T>> unsert(T e) {
         return get.map(pair -> {
+            // The ternary operator does not work here because we need to use
+            // a temporary variable to deal with the pair
             if(pair.head == e) {
                 return new Pair<Boolean,Cons<T>>(true, pair.tail);
             } else {
                 final Pair<Boolean,Cons<T>> tmp = pair.tail.unsert(e);
+                // Here, we return the tmp (the call on tail), but we cons head with the resulting list.
                 return new Pair<Boolean,Cons<T>>(tmp.head, new Cons<T>(pair.head, tmp.tail));
             }
         }).orElse(new Pair<Boolean,Cons<T>>(false, this));
     }
 
+    // Cons' getPosition() method.
     Optional<Integer> lookup(Integer i, T val) {
         return get.map(pair ->
             pair.head == val
           ? Optional.of(i)
+          // We only need to continue if head is smaller than val
           : ( pair.head.compareTo(val) > 0
-            ? pair.tail.lookup(i + 1, val)
-            : Optional.<Integer>empty()
+            ? Optional.<Integer>empty()
+            : pair.tail.lookup(i + 1, val)
             )
         ).orElse(Optional.empty());
     }
 
+    // Cons' get() method.
     Optional<T> index(Integer i) {
         return get.map(pair ->
             i == 0 ? Optional.of(pair.head) : pair.tail.index(i - 1)
         ).orElse(Optional.empty());
     }
 
+    // Cons' contains() method.
     boolean elem(T val) {
         return get.map(pair ->
             val == pair.head ? true : pair.tail.elem(val)
         ).orElse(false);
     }
 
+    // Cons' size() method.
     int length() {
         return get.map(pair ->
             1 + pair.tail.length()
         ).orElse(0);
     }
 
+    // Cons' toArray() method, where arr is the array to add to,
+    // and i is the next index to be filled (within the array)
     void confine(T[] arr, int i) {
         get.ifPresent(pair -> {
             arr[i] = pair.head;
