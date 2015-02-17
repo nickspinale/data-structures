@@ -2,6 +2,10 @@ import java.util.*;
 import java.util.function.*;
 import java.util.Optional.*;
 
+/* A SortedList implementation.
+ * By Nick Spinale
+ */
+
 public class SortedLinkedList implements SortedList<ZooAnimal> {
 
     // The sortedlinkedlist class is merely a SortedList-shaped wrapper
