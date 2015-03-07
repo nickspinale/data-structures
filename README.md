@@ -5,3 +5,5 @@ In the spirit of functional programming (and as a diplomatic gesture towards Jav
   - no explicit loops
   - no explicit recursion
   - all variables must be declared as final
+
+UPDATE: This was a horrible idea, and only lasted for one assignment.
